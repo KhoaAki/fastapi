@@ -13,7 +13,7 @@ from fastapi_pagination import Page, Params, paginate
 from basemodel.QuizModel import AnswerCreate, QuestionCreate, ClassAssignment, QuizWithQuestionsCreate, AnswerUpdate, QuestionUpdate, UpdateQuestion, AnswerResponse, QuestionResponse, QuizDetailResponse, AnswerSubmission, QuizSubmission, QuestionReview, QuizReviewResponse, QuizDetailResponse1,AnswerResponse1, QuestionResponse1, QuizSummaryResponse, QuizRequest
 router = APIRouter()
 
-#API lấy thông tin bài tập của giáo viên 
+#API lấy thông tin bài tập của giáo vin 
 @router.get("/api/teacher/quizzes", response_model=Page[dict], tags=["Quizzes"])
 def get_teacher_quizzes(
     db: Session = Depends(get_db), 
