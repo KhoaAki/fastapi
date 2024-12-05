@@ -283,7 +283,7 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
     if request.new_password != request.confirm_password:
         raise HTTPException(status_code=400, detail="Mật khẩu xác nhận không trùng khớp.")
     # Cập nhật mật khẩu mới và xóa mã xác nhận
-    user.password = request.new_password  # Hash mật khẩu trước khi lưu nếu cần
+    user.password = hash_password(request.new_password)  # Hash mật khẩu trước khi lưu nếu cần
     user.reset_code = None
     user.resetPasswordExpiry = None
     db.commit()
