@@ -13,7 +13,7 @@ from typing import Optional, Union
 import uuid
 from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, AVATAR_UPLOAD_PATH, SMTP_SERVER, SMTP_PASS, SMTP_PORT, SMTP_USER
 from basemodel.AuthModel import TokenData, Token, ChangeRespone
-from basemodel.ResetPassModel import ResetPasswordRequest
+from basemodel.ResetPassModel import ResetPasswordRequest, ForgotPasswordRequest
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import string
@@ -243,13 +243,14 @@ async def upload_avatar(
 
 #Gửi mã xác nhận đặt lại mật khẩu
 @router.post("/api/forgot_password")
-def forgot_password(email: str, db: Session = Depends(get_db)):
+def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)):
     # Tìm email trong bảng Student và Teacher
-    student = db.query(Student).filter(Student.email == email).first()
-    teacher = db.query(Teacher).filter(Teacher.email == email).first()
+    student = db.query(Student).filter(Student.email == request.email).first()
+    teacher = db.query(Teacher).filter(Teacher.email == request.email).first()
 
     if not student and not teacher:
         raise HTTPException(status_code=404, detail="Không tìm thấy email trong hệ thống.")
+    
     # Xác định người dùng và lưu mã xác nhận
     user = student if student else teacher
     reset_code = ''.join(random.choices(string.ascii_letters + string.digits, k=5))
@@ -258,6 +259,7 @@ def forgot_password(email: str, db: Session = Depends(get_db)):
     user.reset_code = reset_code
     user.resetPasswordExpiry = expiry_time
     db.commit()
+    
     # Gửi email mã xác nhận
     send_email(user.email, reset_code)
     return {"message": "Mã xác nhận đã được gửi tới email của bạn."}
