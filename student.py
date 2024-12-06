@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel
+from sqlalchemy.sql import func, case
 from database import get_db
 from models import Student, Class, Admin, Distribution, Subject, Teacher, Class_quiz, Questions, Quiz, Score
 from auth import hash_password, get_current_user, verify_password
@@ -14,7 +15,7 @@ from quiz import AnswerResponse, QuestionResponse, QuizDetailResponse
 from collections import defaultdict
 from config import imageprofile
 from basemodel.StudentModel import StudentCreate, StudentResponse, StudentUpdate, QuizResponse, SubjectQuizzesResponse, StudentScoreResponse
-
+from basemodel.QuizModel import QuizSummaryResponse
 router = APIRouter()
 
 def update_total_students(class_id: int, db: Session):
@@ -391,3 +392,51 @@ def get_class_students_scores(
         ))
 
     return student_scores
+
+@router.get("/api/teacher/quizzes/score", response_model=List[QuizSummaryResponse], tags=["Quizzes"])
+def get_quizzes_by_teacher(
+    class_id: int,
+    db: Session = Depends(get_db),
+    current_user: Teacher = Depends(get_current_user)
+):
+    # Ensure the current user is a teacher
+    if not isinstance(current_user, Teacher):
+        raise HTTPException(status_code=403, detail="Only teachers can access this endpoint.")
+    
+    # Query to get the quiz summary data, ordered by due_date descending
+    quiz_summaries = (
+        db.query(
+            Quiz.quiz_id,
+            Quiz.title,
+            Quiz.due_date,
+            func.count(case((Score.status == "Completed", Score.student_id), else_=None)).label("students_with_scores"),
+            func.count(Student.student_id).label("total_student"),
+            func.avg(Score.score).label("average_score")
+        )
+        .join(Class_quiz, Class_quiz.quiz_id == Quiz.quiz_id)
+        .join(Student, Student.class_id == Class_quiz.class_id)
+        .outerjoin(Score, (Score.quiz_id == Quiz.quiz_id) & (Score.student_id == Student.student_id))
+        .filter(Quiz.teacher_id == current_user.teacher_id)  # Filter by current teacher
+        .filter(Class_quiz.class_id == class_id)  # Filter by specific class_id
+        .group_by(Quiz.quiz_id)
+        .order_by(Quiz.due_date.desc())  # Sort by due_date in descending order
+        .all()
+    )
+    
+    # Prepare the response
+    return [
+        QuizSummaryResponse(
+            quiz_id=quiz.quiz_id,
+            title=quiz.title,
+            students_with_scores=quiz.students_with_scores,
+            due_date=quiz.due_date,
+            total_student=quiz.total_student,
+            average_score=round(quiz.average_score, 2) if quiz.average_score is not None else 0.0,
+            status=(
+                "Completed"
+                if quiz.students_with_scores == quiz.total_student
+                else ("Ongoing" if quiz.due_date > datetime.now() else "Expired")
+            )
+        )
+        for quiz in quiz_summaries
+    ]
