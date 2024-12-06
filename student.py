@@ -264,10 +264,10 @@ def get_quizzes_by_subject(
     # Lấy danh sách quiz cho lớp học của học sinh
     class_quiz_ids = db.query(Class_quiz.quiz_id).filter(Class_quiz.class_id == current_user.class_id).subquery()
     
-    # Lấy các quiz thuộc subject_id và nằm trong lớp của học sinh
+    # Lấy các quiz thuộc subject_id và nằm trong lớp của học sinh, sắp xếp theo due_date giảm dần
     quizzes = db.query(Quiz).join(Teacher, Quiz.teacher_id == Teacher.teacher_id) \
                 .filter(Teacher.subject_id == subject_id, Quiz.quiz_id.in_(class_quiz_ids)) \
-                .all()
+                .order_by(Quiz.due_date.desc()).all()
     
     # Lấy điểm của học sinh cho các quiz này
     scores = db.query(Score).filter(Score.student_id == current_user.student_id).all()
@@ -281,20 +281,18 @@ def get_quizzes_by_subject(
     for quiz in quizzes:
         score_entry = score_dict.get(quiz.quiz_id, None)
         
-        # Xác định trạng thái
+        # Xác định trạng thái quiz
         if score_entry:
-            if score_entry.status == "Completed":  # Điều kiện mới
+            if score_entry.status == "Completed":
                 status = "Completed"
             elif score_entry.time_end and datetime.now() < score_entry.time_end:
-                status = "Continues"  # Nếu time_end chưa qua và quiz vẫn đang tiếp tục
-            elif score_entry.status == "Completed":  # Điều kiện mới
-                status = "Completed"
+                status = "Continues"  # Nếu thời gian kết thúc chưa qua và quiz đang tiếp tục
             elif quiz.due_date > datetime.now():
                 status = "Ongoing"  # Nếu quiz đang tiếp diễn
             else:
                 status = "Expired"  # Nếu quiz đã hết hạn
         else:
-            # Nếu không có điểm, kiểm tra nếu thời gian kết thúc đã qua
+            # Nếu không có điểm, kiểm tra thời gian kết thúc
             status = "Ongoing" if quiz.due_date > datetime.now() else "Expired"
         
         score = None
@@ -355,8 +353,12 @@ def get_class_students_scores(
     if not students:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No students found in this class")
     
-    # Lấy danh sách các quiz của lớp
-    quizzes = db.query(Quiz).join(Class_quiz, Quiz.quiz_id == Class_quiz.quiz_id).filter(Class_quiz.class_id == class_id, Quiz.teacher_id == current_user.teacher_id).all()
+    # Lấy danh sách các quiz của lớp và sắp xếp theo due_date giảm dần
+    quizzes = db.query(Quiz).join(Class_quiz, Quiz.quiz_id == Class_quiz.quiz_id).filter(
+        Class_quiz.class_id == class_id, 
+        Quiz.teacher_id == current_user.teacher_id
+    ).order_by(Quiz.due_date.desc()).all()
+    
     quiz_titles = {quiz.quiz_id: quiz.title for quiz in quizzes}
     
     # Tạo kết quả cho từng học sinh
