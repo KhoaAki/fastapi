@@ -44,6 +44,8 @@ def get_teacher_quizzes(
             "class_ids": class_names_list 
         }
         quiz_list.append(quiz_info)
+    # Sort quizzes by due_date in descending order
+    quiz_list.sort(key=lambda x: x['due_date'], reverse=True)
     # Return paginated quiz list
     return paginate(quiz_list, params)
 #APi create Quiz
