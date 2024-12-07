@@ -99,11 +99,11 @@ def get_teacher_classes(
     # Lấy thông tin giáo viên từ current_user
     teacher = db.query(Teacher).filter(Teacher.teacher_id == current_user.teacher_id).first()
     if not teacher:
-        raise HTTPException(status_code=404, detail="Không tìm thấy giáo viên")
+        raise HTTPException(status_code=404, detail="Can not find teacher")
     # Lấy thông tin các lớp mà giáo viên phụ trách từ bảng Distribution
     distributions = db.query(Distribution).filter(Distribution.teacher_id == teacher.teacher_id).all()
     if not distributions:
-        raise HTTPException(status_code=404, detail="Giáo viên này không phụ trách lớp học nào")
+        raise HTTPException(status_code=404, detail="This teacher is not in charge of any classes")
     # Tạo danh sách các lớp
     classes_data = []
     for distribution in distributions:
@@ -114,12 +114,15 @@ def get_teacher_classes(
                 "name_class": class_info.name_class,
                 "total_student": class_info.total_student
             })
+    # Sắp xếp các lớp theo name_class tăng dần
+    classes_data.sort(key=lambda x: x['name_class'])
     return {
         "teacher_id": teacher.teacher_id,
         "mateacher": teacher.mateacher,
         "teacher_name": teacher.name,
         "classes": classes_data
     }
+    
 # API lấy thông tin student theo lớp
 @router.get("/api/teachers/classes/{class_id}", tags=["Classes"])
 def get_classes(
