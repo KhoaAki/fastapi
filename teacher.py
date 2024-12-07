@@ -91,9 +91,6 @@ def get_teacher_detail(
         "classes": class_info
     }
 
-
-
-
 @router.post("/api/post/teachers", tags=["Teachers"])
 def create_teacher(
     teacher_data: TeacherCreate, 
@@ -101,21 +98,19 @@ def create_teacher(
     current_user: Admin = Depends(get_current_user)
 ):
     if not isinstance(current_user, Admin):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can access this resource")
-    # Kiểm tra xem môn học có tồn tại không
+        raise HTTPException(status_code=403, detail="Only admins can access this resource.")
+    # Kiểm tra tồn tại môn học
     subject_info = db.query(Subject).filter(Subject.subject_id == teacher_data.subject_id).first()
     if not subject_info:
-        raise HTTPException(status_code=404, detail="Không tìm thấy môn học")
-    # Kiểm tra xem giáo viên đã tồn tại chưa
-    existing_teacher = db.query(Teacher).filter(Teacher.mateacher == teacher_data.mateacher).first()
-    if existing_teacher:
-        raise HTTPException(status_code=400, detail="Mã giáo viên đã tồn tại")
-    existing_email = db.query(Teacher).filter(Teacher.email == teacher_data.email).first()
-    if existing_email:
-        raise HTTPException(status_code=400, detail="Email đã tồn tại")
+        raise HTTPException(status_code=404, detail="Subject not found.")
+    # Kiểm tra trùng mã hoặc email giáo viên
+    if db.query(Teacher).filter(Teacher.mateacher == teacher_data.mateacher).first():
+        raise HTTPException(status_code=400, detail="Teacher code already exists.")
+    if db.query(Teacher).filter(Teacher.email == teacher_data.email).first():
+        raise HTTPException(status_code=400, detail="Email already exists.")
     # Tạo giáo viên mới
     new_teacher = Teacher(
-        teacher_id=str(uuid.uuid4()),  # Tạo UUID ngẫu nhiên cho teacher_id
+        teacher_id=str(uuid.uuid4()), 
         mateacher=teacher_data.mateacher,
         name=teacher_data.name,
         gender=teacher_data.gender,
@@ -123,32 +118,49 @@ def create_teacher(
         email=teacher_data.email,
         phone_number=teacher_data.phone_number,
         subject_id=teacher_data.subject_id,
-        password=hash_password(teacher_data.password),  # Mã hóa mật khẩu
-        image=imageprofile  # Ảnh mặc định
+        password=hash_password(teacher_data.password),  
+        image=imageprofile  
     )
+    db.add(new_teacher)
+    # Danh sách lớp trùng
+    conflicting_classes = []
+    # Phân công giáo viên vào lớp
+    assigned_classes = []
+    for class_id in teacher_data.class_ids:
+        _class = db.query(Class).filter(Class.class_id == class_id).first()
+        if not _class:
+            raise HTTPException(status_code=404, detail=f"Class with ID {class_id} not found.")
+        # Kiểm tra lớp đã có giáo viên dạy môn học này chưa
+        existing_distribution = db.query(Distribution).join(Teacher).filter(
+            Distribution.class_id == class_id,
+            Teacher.subject_id == teacher_data.subject_id
+        ).first()
+        if existing_distribution:
+            conflicting_classes.append(_class.name_class)
+        else:
+            # Tạo phân công nếu không có trùng lặp
+            new_distribution = Distribution(
+                class_id=class_id,
+                teacher_id=new_teacher.teacher_id
+            )
+            db.add(new_distribution)
+            assigned_classes.append(_class.name_class)
+    if conflicting_classes:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=f"The following classes already have a teacher assigned for this subject: {', '.join(conflicting_classes)}."
+        )
     try:
-        db.add(new_teacher)
         db.commit()
         db.refresh(new_teacher)
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Mã giáo viên hoặc email đã tồn tại")
-    # Phân công giáo viên vào các lớp học
-    for class_id in teacher_data.class_ids:
-        _class = db.query(Class).filter(Class.class_id == class_id).first()
-        if not _class:
-            raise HTTPException(status_code=404, detail=f"Không tìm thấy lớp với ID {class_id}")
-        # Tạo phân công mới giữa giáo viên và lớp
-        new_distribution = Distribution(
-            class_id=class_id,
-            teacher_id=new_teacher.teacher_id  # Sử dụng teacher_id của giáo viên đã lưu
-        )
-        db.add(new_distribution)
-    db.commit()  # Lưu phân công lớp học vào cơ sở dữ liệu
+        raise HTTPException(status_code=400, detail="Error occurred while saving data.")
     return {
-        "message": "Tạo tài khoản giáo viên và phân công lớp thành công",
-        "teacher_id": new_teacher.teacher_id, 
-        "mateacher": new_teacher.mateacher
+        "message": "Teacher created and assigned to classes successfully.",
+        "teacher_id": new_teacher.teacher_id,
+        "assigned_classes": assigned_classes
     }
 
 
