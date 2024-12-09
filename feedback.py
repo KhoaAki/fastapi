@@ -61,6 +61,8 @@ def get_feedback(
         if fb.student_id:
             student = db.query(Student).filter_by(student_id=fb.student_id).first()
             student_name = student.name if student else None
+        
+        # Xử lý phản hồi chính
         if fb.is_parents == 0:  # Phản hồi chính
             feedback_dict[fb.feedback_id] = FeedbackResponse(
                 feedback_id=fb.feedback_id,
@@ -103,10 +105,10 @@ def get_feedback(
     for reply in unlinked_replies:
         teacher_name = None
         student_name = None
-        if fb.teacher_id:
+        if reply.teacher_id:
             teacher = db.query(Teacher).filter_by(teacher_id=reply.teacher_id).first()
             teacher_name = teacher.name if teacher else None
-        if fb.student_id:
+        if reply.student_id:
             student = db.query(Student).filter_by(student_id=reply.student_id).first()
             student_name = student.name if student else None
         if reply.parent_id in feedback_dict:
@@ -121,8 +123,8 @@ def get_feedback(
                     is_parents=reply.is_parents,
                     parent_id=reply.parent_id,
                     created_at=reply.created_at,
-                    teacher_name=teacher_name,  # Có thể bổ sung nếu cần
-                    student_name=student_name,  # Có thể bổ sung nếu cần
+                    teacher_name=teacher_name,  
+                    student_name=student_name,  
                     name_subject=None,
                 )
             )
@@ -138,7 +140,6 @@ def get_feedback(
             for reply in feedback_dict[fb_id].replies:
                 reply.name_subject = name_subject
     return list(feedback_dict.values())
-
 
 @router.post("/api/post/feedback", response_model=FeedbackResponse, tags=["Feedback"])
 def create_feedback(
@@ -197,7 +198,7 @@ def create_feedback(
             recipient = db.query(Teacher).filter(Teacher.teacher_id == parent_feedback.teacher_id).first()
         # Tạo nội dung thông báo
         if recipient:
-            notification_context = f"{current_user.name} đã trả lời phản hồi của bạn: {feedback.context[:50]}..."
+            notification_context = f"{current_user.name} đã trả lời phản hồi của bạn: {feedback.context[:9]}..."
             new_notification = Notification(
                 context=notification_context,
                 student_id=recipient.student_id if isinstance(recipient, Student) else None,
