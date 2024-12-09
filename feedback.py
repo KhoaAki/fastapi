@@ -150,7 +150,6 @@ def create_feedback(
         subject_id=feedback.subject_id,
         is_parents=is_parents,
         parent_id=feedback.parent_id,
-        created_at=datetime.now()
     )
     db.add(new_feedback)
     db.commit()
