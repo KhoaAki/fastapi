@@ -19,10 +19,10 @@ def read_user_notifications(current_user: BaseModel = Depends(get_current_user),
     # Check user role and fetch notifications accordingly
     if isinstance(current_user, Student):
         # Fetch notifications for the student
-        notifications = db.query(Notification).filter(Notification.student_id == current_user.student_id).all()
+        notifications = db.query(Notification).filter(Notification.student_id == current_user.student_id).order_by(Notification.time.desc()).all()
     elif isinstance(current_user, Teacher):
         # Fetch notifications for the teacher
-        notifications = db.query(Notification).filter(Notification.teacher_id == current_user.teacher_id).all()
+        notifications = db.query(Notification).filter(Notification.teacher_id == current_user.teacher_id).order_by(Notification.time.desc()).all()
     else:
         raise HTTPException(status_code=400, detail="Invalid user role")
     return notifications
