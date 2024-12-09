@@ -5,8 +5,9 @@ from datetime import datetime
 from sqlalchemy.orm import relationship
 from zoneinfo import ZoneInfo
 def get_vietnam_time():
-    vietnam_tz = ZoneInfo("Asia/Ho_Chi_Minh")
-    return datetime.now(tz=vietnam_tz)
+    utc_time = datetime.utcnow()
+    vietnam_time = utc_time + timedelta(hours=7)
+    return vietnam_time
 class Admin(Base):
     __tablename__ = "admin"
     admin_id = Column(String(36), primary_key=True)
