@@ -58,6 +58,11 @@ def create_quiz_with_questions(
     # Kiểm tra nếu người dùng hiện tại là giáo viên
     if not isinstance(current_user, Teacher):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chỉ giáo viên mới có quyền tạo quiz.")
+    teacher = db.query(Teacher).filter(Teacher.teacher_id == current_user.teacher_id).first()
+    if not teacher:
+        raise HTTPException(status_code=404, detail="Giáo viên không tồn tại.")
+    subject = db.query(Subject).filter(Subject.subject_id == teacher.subject_id).first()
+    subject_name = subject.name_subject if subject else "Môn học không xác định"
     # Tạo một quiz mới
     new_quiz = Quiz(
         title=quiz_data.title,
@@ -86,7 +91,11 @@ def create_quiz_with_questions(
         for student in students:
             notification = Notification(
                 noti_id=str(uuid.uuid4()),
-                context=f"Một quiz mới '{new_quiz.title}' đã được giao và hạn nộp vào {new_quiz.due_date}.",
+                context=(
+                    f"Giáo viên {teacher.name} vừa giao một quiz mới "
+                    f"'{new_quiz.title}' trong môn {subject_name}. "
+                    f"Hạn nộp là {new_quiz.due_date.strftime('%d/%m/%Y %H:%M')}."
+                ),
                 time=datetime.now(),
                 student_id=student.student_id
             )
