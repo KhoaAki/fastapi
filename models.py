@@ -1,8 +1,9 @@
 from sqlalchemy import Column, String, Integer, DateTime, Boolean, ForeignKey, VARCHAR,Text, Float, func
 from database import Base
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 from sqlalchemy.orm import relationship
+from datetime import timedelta
 def get_vietnam_time():
     utc_time = datetime.now()
     vietnam_time = utc_time + timedelta(hours=7)
