@@ -175,7 +175,6 @@ def create_feedback(
                 notification_context = f"{current_user.name} đã phản hồi bạn"
                 new_notification = Notification(
                     context=notification_context,
-                    time=datetime.now(),
                     teacher_id=recipient.teacher_id if isinstance(recipient, Teacher) else None,
                     student_id=recipient.student_id if isinstance(recipient, Student) else None
                 )
@@ -191,7 +190,6 @@ def create_feedback(
             if teacher:
                 new_notification = Notification(
                     context=notification_context,
-                    time=datetime.now(),
                     teacher_id=teacher.teacher_id,
                     student_id=None  # Không cần thiết
                 )
@@ -205,7 +203,6 @@ def create_feedback(
             for student in students:
                 new_notification = Notification(
                     context=notification_context,
-                    time=datetime.now(),
                     student_id=student.student_id,
                     teacher_id=None  # Không cần thiết
                 )
