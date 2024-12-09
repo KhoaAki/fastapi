@@ -3,11 +3,7 @@ from database import Base
 import uuid
 from datetime import datetime
 from sqlalchemy.orm import relationship
-from datetime import timedelta
-def get_vietnam_time():
-    utc_time = datetime.now()
-    vietnam_time = utc_time + timedelta(hours=7)
-    return vietnam_time
+
 class Admin(Base):
     __tablename__ = "admin"
     admin_id = Column(String(36), primary_key=True)
@@ -136,4 +132,4 @@ class Feedback(Base):
     subject_id = Column(Integer, ForeignKey('subject.subject_id'), nullable=False)  # Bắt buộc phải có môn học
     is_parents = Column(Integer, default=0)  # 0 là feedback cha, 1 là feedback con
     parent_id = Column(String(36), nullable=True)  # Chỉ điền khi là feedback con
-    created_at = Column(DateTime(timezone=False), default=get_vietnam_time)
+    created_at = Column(DateTime(timezone=True), default=datetime.now() + timedelta(hours=7))
