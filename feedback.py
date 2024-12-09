@@ -49,7 +49,7 @@ def get_feedback(
         )
 
     # Truy vấn danh sách feedback
-    feedback_list = db.query(Feedback).filter_by(class_id=class_id, subject_id=subject_id).order_by(Feedback.created_at).all()
+    feedback_list = db.query(Feedback).filter_by(class_id=class_id, subject_id=subject_id).order_by(Feedback.created_at.desc()).all()
 
     # Tạo danh sách phản hồi chính và trả lời
     feedback_dict = {}
