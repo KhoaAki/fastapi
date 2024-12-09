@@ -1,7 +1,7 @@
 from sqlalchemy import Column, String, Integer, DateTime, Boolean, ForeignKey, VARCHAR,Text, Float
 from database import Base
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy.orm import relationship
 from zoneinfo import ZoneInfo
 def get_vietnam_time():
