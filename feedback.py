@@ -47,24 +47,20 @@ def get_feedback(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only students, teachers, and administrators can view feedback.",
         )
-
     # Truy vấn danh sách feedback
     feedback_list = db.query(Feedback).filter_by(class_id=class_id, subject_id=subject_id).order_by(Feedback.created_at.desc()).all()
-
     # Tạo danh sách phản hồi chính và trả lời
     feedback_dict = {}
+    unlinked_replies = []  # Danh sách phản hồi chưa liên kết
     for fb in feedback_list:
         teacher_name = None
         student_name = None
-
         if fb.teacher_id:
             teacher = db.query(Teacher).filter_by(teacher_id=fb.teacher_id).first()
             teacher_name = teacher.name if teacher else None
-
         if fb.student_id:
             student = db.query(Student).filter_by(student_id=fb.student_id).first()
             student_name = student.name if student else None
-
         if fb.is_parents == 0:  # Phản hồi chính
             feedback_dict[fb.feedback_id] = FeedbackResponse(
                 feedback_id=fb.feedback_id,
@@ -82,6 +78,7 @@ def get_feedback(
                 name_subject=None,  # Môn học sẽ được thêm sau
             )
         else:  # Phản hồi phụ
+            # Kiểm tra xem parent_id có tồn tại trong feedback_dict không
             if fb.parent_id in feedback_dict:
                 feedback_dict[fb.parent_id].replies.append(
                     FeedbackReply(
@@ -99,6 +96,29 @@ def get_feedback(
                         name_subject=None,
                     )
                 )
+            else:
+                # Lưu trữ phản hồi chưa liên kết
+                unlinked_replies.append(fb)
+    # Liên kết các reply chưa được gắn
+    for reply in unlinked_replies:
+        if reply.parent_id in feedback_dict:
+            feedback_dict[reply.parent_id].replies.append(
+                FeedbackReply(
+                    feedback_id=reply.feedback_id,
+                    context=reply.context,
+                    teacher_id=reply.teacher_id,
+                    student_id=reply.student_id,
+                    class_id=reply.class_id,
+                    subject_id=reply.subject_id,
+                    is_parents=reply.is_parents,
+                    parent_id=reply.parent_id,
+                    created_at=reply.created_at,
+                    teacher_name=None,  # Có thể bổ sung nếu cần
+                    student_name=None,  # Có thể bổ sung nếu cần
+                    name_subject=None,
+                )
+            )
+    # Sắp xếp các phản hồi phụ theo thời gian
     for feedback in feedback_dict.values():
         feedback.replies.sort(key=lambda reply: reply.created_at, reverse=True)
     # Cập nhật thông tin môn học
@@ -109,7 +129,6 @@ def get_feedback(
             feedback_dict[fb_id].name_subject = name_subject
             for reply in feedback_dict[fb_id].replies:
                 reply.name_subject = name_subject
-
     return list(feedback_dict.values())
 
 
