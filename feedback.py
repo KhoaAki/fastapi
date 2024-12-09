@@ -18,6 +18,7 @@ def get_feedback(
     db: Session = Depends(get_db),
     current_user: Union[Student, Teacher, Admin] = Depends(get_current_user),
 ):
+    # Xác định quyền hạn của người dùng
     if isinstance(current_user, Student):
         class_id = current_user.class_id
         if not subject_id:
@@ -31,31 +32,28 @@ def get_feedback(
             Distribution.teacher_id == current_user.teacher_id
         ).first()
         if not class_assigned:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have any permission to go this class")
-    elif isinstance(current_user, Admin):
-        pass
-    else:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this class")
+    elif not isinstance(current_user, Admin):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Chỉ học sinh, giáo viên và quản trị viên mới có quyền xem phản hồi."
+            detail="Only students, teachers, and administrators can view feedback."
         )
-
+    # Truy vấn feedback và thông tin môn học
     feedback_list = db.query(Feedback).filter_by(class_id=class_id, subject_id=subject_id).all()
     subject = db.query(Subject).filter(Subject.subject_id == subject_id).first()
     name_subject = subject.name_subject if subject else None
-
+    # Xây dựng dictionary phản hồi
     feedback_dict = {}
     for fb in feedback_list:
         teacher_name = None
         student_name = None
-
         if fb.teacher_id:
             teacher = db.query(Teacher).filter_by(teacher_id=fb.teacher_id).first()
             teacher_name = teacher.name if teacher else None
         if fb.student_id:
             student = db.query(Student).filter_by(student_id=fb.student_id).first()
             student_name = student.name if student else None
-
+        # Nếu là phản hồi chính
         if fb.is_parents == 0:
             feedback_dict[fb.feedback_id] = FeedbackResponse(
                 feedback_id=fb.feedback_id,
@@ -72,23 +70,22 @@ def get_feedback(
                 student_name=student_name,
                 name_subject=name_subject
             )
-        elif fb.is_parents == 1:
-            if fb.parent_id in feedback_dict:
-                feedback_dict[fb.parent_id].replies.append(FeedbackReply(
-                    feedback_id=fb.feedback_id,
-                    context=fb.context,
-                    teacher_id=fb.teacher_id,
-                    student_id=fb.student_id,
-                    class_id=fb.class_id,
-                    subject_id=fb.subject_id,
-                    is_parents=fb.is_parents,
-                    parent_id=fb.parent_id,
-                    created_at=fb.created_at,
-                    teacher_name=teacher_name,
-                    student_name=student_name,
-                    name_subject=name_subject
-                ))
-
+        # Nếu là phản hồi phụ (trả lời)
+        elif fb.is_parents == 1 and fb.parent_id in feedback_dict:
+            feedback_dict[fb.parent_id].replies.append(FeedbackReply(
+                feedback_id=fb.feedback_id,
+                context=fb.context,
+                teacher_id=fb.teacher_id,
+                student_id=fb.student_id,
+                class_id=fb.class_id,
+                subject_id=fb.subject_id,
+                is_parents=fb.is_parents,
+                parent_id=fb.parent_id,
+                created_at=fb.created_at,
+                teacher_name=teacher_name,
+                student_name=student_name,
+                name_subject=name_subject
+            ))
     return list(feedback_dict.values())
 
 
