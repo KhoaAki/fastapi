@@ -189,13 +189,24 @@ def create_feedback(
                 recipient = db.query(Teacher).filter(Teacher.teacher_id == parent_feedback.teacher_id).first()
             else:
                 recipient = None
-            
-            if recipient:
-                notification_context = f"{current_user.name} đã phản hồi bạn"
+            if isinstance(recipient, Teacher):
+                subject = db.query(Subject).filter(Subject.subject_id == feedback.subject_id).first()
+                subject_name = subject.name_subject if subject else "không xác định"
+                notification_context = f"{current_user.name},Môn {subject_name} đã phản hồi bạn"
                 new_notification = Notification(
                     context=notification_context,
-                    teacher_id=recipient.teacher_id if isinstance(recipient, Teacher) else None,
-                    student_id=recipient.student_id if isinstance(recipient, Student) else None
+                    teacher_id=None,
+                    student_id=recipient.student_id 
+                )
+                db.add(new_notification)
+            elif isinstance(current_user, Student):
+                student_class = db.query(Class).filter(Class.class_id == current_user.class_id).first()
+                class_name = student_class.name_class if student_class else "không xác định"
+                notification_context = f"{current_user.name}, Lớp {class_name} đã phản hồi bạn"
+                new_notification = Notification(
+                    context=notification_context,
+                    teacher_id=recipient.teacher_id,
+                    student_id=None 
                 )
                 db.add(new_notification)
     else:
