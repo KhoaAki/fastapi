@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timedelta
 from sqlalchemy.orm import relationship
 def get_vietnam_time():
-    utc_time = datetime.utcnow()
+    utc_time = datetime.now()
     vietnam_time = utc_time + timedelta(hours=7)
     return vietnam_time
 class Admin(Base):
