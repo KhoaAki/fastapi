@@ -5,7 +5,6 @@ from datetime import datetime
 from sqlalchemy.orm import relationship
 import pytz
 vn_tz = pytz.timezone('Asia/Ho_Chi_Minh')
-local_tz = pytz.timezone(os.environ.get("TZ", "UTC"))
 class Admin(Base):
     __tablename__ = "admin"
     admin_id = Column(String(36), primary_key=True)
@@ -134,4 +133,4 @@ class Feedback(Base):
     subject_id = Column(Integer, ForeignKey('subject.subject_id'), nullable=False)  # Bắt buộc phải có môn học
     is_parents = Column(Integer, default=0)  # 0 là feedback cha, 1 là feedback con
     parent_id = Column(String(36), nullable=True)  # Chỉ điền khi là feedback con
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(local_tz))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(vn_tz))
