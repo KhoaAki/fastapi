@@ -101,6 +101,14 @@ def get_feedback(
                 unlinked_replies.append(fb)
     # Liên kết các reply chưa được gắn
     for reply in unlinked_replies:
+        teacher_name = None
+        student_name = None
+        if fb.teacher_id:
+            teacher = db.query(Teacher).filter_by(teacher_id=fb.teacher_id).first()
+            teacher_name = teacher.name if teacher else None
+        if fb.student_id:
+            student = db.query(Student).filter_by(student_id=fb.student_id).first()
+            student_name = student.name if student else None
         if reply.parent_id in feedback_dict:
             feedback_dict[reply.parent_id].replies.append(
                 FeedbackReply(
@@ -113,8 +121,8 @@ def get_feedback(
                     is_parents=reply.is_parents,
                     parent_id=reply.parent_id,
                     created_at=reply.created_at,
-                    teacher_name=None,  # Có thể bổ sung nếu cần
-                    student_name=None,  # Có thể bổ sung nếu cần
+                    teacher_name=teacher_name,  # Có thể bổ sung nếu cần
+                    student_name=student_name,  # Có thể bổ sung nếu cần
                     name_subject=None,
                 )
             )
