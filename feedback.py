@@ -104,10 +104,10 @@ def get_feedback(
         teacher_name = None
         student_name = None
         if fb.teacher_id:
-            teacher = db.query(Teacher).filter_by(teacher_id=fb.teacher_id).first()
+            teacher = db.query(Teacher).filter_by(teacher_id=reply.teacher_id).first()
             teacher_name = teacher.name if teacher else None
         if fb.student_id:
-            student = db.query(Student).filter_by(student_id=fb.student_id).first()
+            student = db.query(Student).filter_by(student_id=reply.student_id).first()
             student_name = student.name if student else None
         if reply.parent_id in feedback_dict:
             feedback_dict[reply.parent_id].replies.append(
