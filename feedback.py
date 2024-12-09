@@ -99,7 +99,8 @@ def get_feedback(
                         name_subject=None,
                     )
                 )
-
+    for feedback in feedback_dict.values():
+        feedback.replies.sort(key=lambda reply: reply.created_at)
     # Cập nhật thông tin môn học
     if subject_id:
         subject = db.query(Subject).filter(Subject.subject_id == subject_id).first()
