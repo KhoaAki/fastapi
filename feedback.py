@@ -21,17 +21,17 @@ def get_feedback(
     if isinstance(current_user, Student):
         class_id = current_user.class_id
         if not subject_id:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cần cung cấp subject_id để truy cập phản hồi.")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Provide subject to access")
     elif isinstance(current_user, Teacher):
         subject_id = current_user.subject_id
         if not class_id:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cần cung cấp class_id để truy cập phản hồi.")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Provide class to access")
         class_assigned = db.query(Distribution).filter(
             Distribution.class_id == class_id,
             Distribution.teacher_id == current_user.teacher_id
         ).first()
         if not class_assigned:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Bạn không có quyền truy cập lớp học này.")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have any permission to go this class")
     elif isinstance(current_user, Admin):
         pass
     else:
@@ -101,23 +101,23 @@ def create_feedback(
     if isinstance(current_user, Student):
         feedback.class_id = current_user.class_id
         if not feedback.subject_id:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cần cung cấp subject_id để tạo phản hồi.")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Provide subject to access")
         student = db.query(Student).filter(
             Student.student_id == current_user.student_id,
             Student.class_id == feedback.class_id
         ).first()
         if not student:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Bạn không có quyền gửi phản hồi cho lớp này.")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have any permission")
     elif isinstance(current_user, Teacher):
         feedback.subject_id = current_user.subject_id
         if not feedback.class_id:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cần cung cấp class_id để tạo phản hồi.")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Provide class to access")
         class_assigned = db.query(Distribution).filter(
             Distribution.class_id == feedback.class_id,
             Distribution.teacher_id == current_user.teacher_id
         ).first()
         if not class_assigned:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Bạn không có quyền gửi phản hồi cho lớp này.")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have any permission")
     else:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chỉ học sinh và giáo viên mới có quyền tạo phản hồi.")
 
@@ -129,17 +129,48 @@ def create_feedback(
         class_id=feedback.class_id,
         subject_id=feedback.subject_id,
         is_parents=is_parents,
-        parent_id=feedback.parent_id
+        parent_id=feedback.parent_id,
+        created_at=datetime.now()
     )
     db.add(new_feedback)
     db.commit()
     db.refresh(new_feedback)
 
+    # Gửi thông báo
+    if isinstance(current_user, Student):
+        # Gửi thông báo đến giáo viên phụ trách lớp/môn
+        student_class = db.query(Class).filter(Class.class_id == current_user.class_id).first()
+        class_name = student_class.name_class if student_class else "không xác định"
+        notification_context = f"Phản hồi hỗ trợ mới từ học sinh {current_user.name} - Lớp: {class_name}."
+        teacher = db.query(Teacher).filter(Teacher.subject_id == feedback.subject_id).first()
+        if teacher:
+            new_notification = Notification(
+                context=notification_context,
+                time=datetime.now(),
+                teacher_id=teacher.teacher_id,
+                student_id=None  # Không cần thiết
+            )
+            db.add(new_notification)
+    elif isinstance(current_user, Teacher):
+        # Gửi thông báo đến tất cả học sinh trong lớp
+        subject = db.query(Subject).filter(Subject.subject_id == feedback.subject_id).first()
+        subject_name = subject.name_subject if subject else "không xác định"
+        notification_context = f"Phản hồi hỗ trợ mới từ giáo viên {current_user.name} - Môn: {subject_name}."
+        students = db.query(Student).filter(Student.class_id == feedback.class_id).all()
+        for student in students:
+            new_notification = Notification(
+                context=notification_context,
+                time=datetime.now(),
+                student_id=student.student_id,
+                teacher_id=None  # Không cần thiết
+            )
+            db.add(new_notification)
+    db.commit()
+    # Trả về phản hồi
     subject = db.query(Subject).filter(Subject.subject_id == feedback.subject_id).first()
     name_subject = subject.name_subject if subject else None
     teacher_name = current_user.name if isinstance(current_user, Teacher) else None
     student_name = current_user.name if isinstance(current_user, Student) else None
-
     return FeedbackResponse(
         feedback_id=new_feedback.feedback_id,
         context=new_feedback.context,
