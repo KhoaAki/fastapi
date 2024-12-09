@@ -148,6 +148,7 @@ def create_feedback(
         student_id=current_user.student_id if isinstance(current_user, Student) else None,
         class_id=feedback.class_id,
         subject_id=feedback.subject_id,
+        created_at = feedback.created_at,
         is_parents=is_parents,
         parent_id=feedback.parent_id,
         created_at=datetime.now()
