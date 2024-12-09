@@ -177,38 +177,25 @@ def create_feedback(
 
     # Gửi thông báo
     if feedback.parent_id:
-        # Lấy thông tin feedback gốc
+        # Trả lời một phản hồi
         parent_feedback = db.query(Feedback).filter(Feedback.feedback_id == feedback.parent_id).first()
-        if parent_feedback:
-            # Xác định người nhận thông báo
-            if parent_feedback.student_id:
-                # Thông báo đến học sinh
-                recipient = db.query(Student).filter(Student.student_id == parent_feedback.student_id).first()
-            elif parent_feedback.teacher_id:
-                # Thông báo đến giáo viên
-                recipient = db.query(Teacher).filter(Teacher.teacher_id == parent_feedback.teacher_id).first()
-            else:
-                recipient = None
-            if isinstance(recipient, Teacher):
-                subject = db.query(Subject).filter(Subject.subject_id == feedback.subject_id).first()
-                subject_name = subject.name_subject if subject else "không xác định"
-                notification_context = f"{current_user.name},Môn {subject_name} đã phản hồi bạn"
-                new_notification = Notification(
-                    context=notification_context,
-                    teacher_id=None,
-                    student_id=recipient.student_id 
-                )
-                db.add(new_notification)
-            elif isinstance(current_user, Student):
-                student_class = db.query(Class).filter(Class.class_id == current_user.class_id).first()
-                class_name = student_class.name_class if student_class else "không xác định"
-                notification_context = f"{current_user.name}, Lớp {class_name} đã phản hồi bạn"
-                new_notification = Notification(
-                    context=notification_context,
-                    teacher_id=recipient.teacher_id,
-                    student_id=None 
-                )
-                db.add(new_notification)
+        if not parent_feedback:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parent feedback not found")
+        # Xác định người nhận thông báo
+        recipient = None
+        if parent_feedback.student_id:
+            recipient = db.query(Student).filter(Student.student_id == parent_feedback.student_id).first()
+        elif parent_feedback.teacher_id:
+            recipient = db.query(Teacher).filter(Teacher.teacher_id == parent_feedback.teacher_id).first()
+        # Tạo nội dung thông báo
+        if recipient:
+            notification_context = f"{current_user.name} đã trả lời phản hồi của bạn: {feedback.context[:50]}..."
+            new_notification = Notification(
+                context=notification_context,
+                student_id=recipient.student_id if isinstance(recipient, Student) else None,
+                teacher_id=recipient.teacher_id if isinstance(recipient, Teacher) else None
+            )
+            db.add(new_notification)
     else:
         # Logic gửi thông báo như trước
         if isinstance(current_user, Student):
