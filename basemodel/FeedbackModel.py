@@ -1,7 +1,10 @@
 from typing import List, Optional, Union
 from pydantic import BaseModel
 from database import get_db
-from datetime import datetime
+from datetime import datetime, timedelta
+
+def current_time():
+    return datetime.utcnow() + timedelta(hours=7)
 
 class FeedbackReply(BaseModel):
     feedback_id: str
@@ -39,3 +42,4 @@ class FeedbackCreate(BaseModel):
     subject_id: Optional[int] = None
     class_id: Optional[int] = None
     parent_id: Optional[str] = None
+    created_at: datetime = current_time()
