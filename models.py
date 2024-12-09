@@ -3,7 +3,6 @@ from database import Base
 import uuid
 from datetime import datetime, timedelta
 from sqlalchemy.orm import relationship
-from zoneinfo import ZoneInfo
 def get_vietnam_time():
     utc_time = datetime.utcnow()
     vietnam_time = utc_time + timedelta(hours=7)
