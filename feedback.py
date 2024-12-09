@@ -157,34 +157,59 @@ def create_feedback(
     db.refresh(new_feedback)
 
     # Gửi thông báo
-    if isinstance(current_user, Student):
-        # Gửi thông báo đến giáo viên phụ trách lớp/môn
-        student_class = db.query(Class).filter(Class.class_id == current_user.class_id).first()
-        class_name = student_class.name_class if student_class else "không xác định"
-        notification_context = f"Phản hồi hỗ trợ mới từ học sinh {current_user.name} - Lớp: {class_name}."
-        teacher = db.query(Teacher).filter(Teacher.subject_id == feedback.subject_id).first()
-        if teacher:
-            new_notification = Notification(
-                context=notification_context,
-                time=datetime.now(),
-                teacher_id=teacher.teacher_id,
-                student_id=None  # Không cần thiết
-            )
-            db.add(new_notification)
-    elif isinstance(current_user, Teacher):
-        # Gửi thông báo đến tất cả học sinh trong lớp
-        subject = db.query(Subject).filter(Subject.subject_id == feedback.subject_id).first()
-        subject_name = subject.name_subject if subject else "không xác định"
-        notification_context = f"Phản hồi hỗ trợ mới từ giáo viên {current_user.name} - Môn: {subject_name}."
-        students = db.query(Student).filter(Student.class_id == feedback.class_id).all()
-        for student in students:
-            new_notification = Notification(
-                context=notification_context,
-                time=datetime.now(),
-                student_id=student.student_id,
-                teacher_id=None  # Không cần thiết
-            )
-            db.add(new_notification)
+    if feedback.parent_id:
+        # Lấy thông tin feedback gốc
+        parent_feedback = db.query(Feedback).filter(Feedback.feedback_id == feedback.parent_id).first()
+        if parent_feedback:
+            # Xác định người nhận thông báo
+            if parent_feedback.student_id:
+                # Thông báo đến học sinh
+                recipient = db.query(Student).filter(Student.student_id == parent_feedback.student_id).first()
+            elif parent_feedback.teacher_id:
+                # Thông báo đến giáo viên
+                recipient = db.query(Teacher).filter(Teacher.teacher_id == parent_feedback.teacher_id).first()
+            else:
+                recipient = None
+            
+            if recipient:
+                notification_context = f"{current_user.name} đã phản hồi bạn"
+                new_notification = Notification(
+                    context=notification_context,
+                    time=datetime.now(),
+                    teacher_id=recipient.teacher_id if isinstance(recipient, Teacher) else None,
+                    student_id=recipient.student_id if isinstance(recipient, Student) else None
+                )
+                db.add(new_notification)
+    else:
+        # Logic gửi thông báo như trước
+        if isinstance(current_user, Student):
+            # Gửi thông báo đến giáo viên phụ trách lớp/môn
+            student_class = db.query(Class).filter(Class.class_id == current_user.class_id).first()
+            class_name = student_class.name_class if student_class else "không xác định"
+            notification_context = f"Phản hồi hỗ trợ mới từ học sinh {current_user.name} - Lớp: {class_name}."
+            teacher = db.query(Teacher).filter(Teacher.subject_id == feedback.subject_id).first()
+            if teacher:
+                new_notification = Notification(
+                    context=notification_context,
+                    time=datetime.now(),
+                    teacher_id=teacher.teacher_id,
+                    student_id=None  # Không cần thiết
+                )
+                db.add(new_notification)
+        elif isinstance(current_user, Teacher):
+            # Gửi thông báo đến tất cả học sinh trong lớp
+            subject = db.query(Subject).filter(Subject.subject_id == feedback.subject_id).first()
+            subject_name = subject.name_subject if subject else "không xác định"
+            notification_context = f"Phản hồi hỗ trợ mới từ giáo viên {current_user.name} - Môn: {subject_name}."
+            students = db.query(Student).filter(Student.class_id == feedback.class_id).all()
+            for student in students:
+                new_notification = Notification(
+                    context=notification_context,
+                    time=datetime.now(),
+                    student_id=student.student_id,
+                    teacher_id=None  # Không cần thiết
+                )
+                db.add(new_notification)
     db.commit()
     # Trả về phản hồi
     subject = db.query(Subject).filter(Subject.subject_id == feedback.subject_id).first()
