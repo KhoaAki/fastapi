@@ -121,7 +121,7 @@ class Notification(Base):
     __tablename__ = 'notification'
     noti_id = Column(String(36), primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
     context = Column(Text)
-    time = Column(DateTime)
+    time = Column(DateTime(timezone=True), default=get_current_time)
     teacher_id = Column(String(36), ForeignKey('teacher.teacher_id'), nullable=True)
     student_id = Column(String(36), ForeignKey('student.student_id'), nullable=True)
     
