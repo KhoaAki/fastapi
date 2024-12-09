@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, Boolean, ForeignKey, VARCHAR,Text, Float
+from sqlalchemy import Column, String, Integer, DateTime, Boolean, ForeignKey, VARCHAR,Text, Float, func
 from database import Base
 import uuid
 from datetime import datetime, timedelta
@@ -135,4 +135,4 @@ class Feedback(Base):
     subject_id = Column(Integer, ForeignKey('subject.subject_id'), nullable=False)  # Bắt buộc phải có môn học
     is_parents = Column(Integer, default=0)  # 0 là feedback cha, 1 là feedback con
     parent_id = Column(String(36), nullable=True)  # Chỉ điền khi là feedback con
-    created_at = Column(DateTime, default=get_vietnam_time)
+    created_at = Column(DateTime(timezone=True), default=get_vietnam_time)
