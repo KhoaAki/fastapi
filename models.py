@@ -3,13 +3,12 @@ from database import Base
 import uuid
 from datetime import datetime
 from sqlalchemy.orm import relationship
+from zoneinfo import ZoneInfo
 import pytz
-import os
-import time
-# Set the environment variable to the Vietnam timezone
-os.environ['TZ'] = 'Asia/Ho_Chi_Minh'
-time.tzset()  # Apply the timezone setting
 tz_VN = pytz.timezone('Asia/Ho_Chi_Minh')
+def get_vietnam_time():
+    vietnam_tz = ZoneInfo("Asia/Ho_Chi_Minh")
+    return datetime.now(tz=vietnam_tz)
 class Admin(Base):
     __tablename__ = "admin"
     admin_id = Column(String(36), primary_key=True)
@@ -138,4 +137,4 @@ class Feedback(Base):
     subject_id = Column(Integer, ForeignKey('subject.subject_id'), nullable=False)  # Bắt buộc phải có môn học
     is_parents = Column(Integer, default=0)  # 0 là feedback cha, 1 là feedback con
     parent_id = Column(String(36), nullable=True)  # Chỉ điền khi là feedback con
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz_VN))
+    created_at = Column(DateTime, default=datetime.now(tz_VN))
