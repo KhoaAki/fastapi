@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import relationship
 import pytz
 tz_VN = pytz.timezone('Asia/Ho_Chi_Minh')
+def get_current_time():
+    return datetime.now(pytz.timezone('Asia/Ho_Chi_Minh'))
 class Admin(Base):
     __tablename__ = "admin"
     admin_id = Column(String(36), primary_key=True)
@@ -133,4 +135,4 @@ class Feedback(Base):
     subject_id = Column(Integer, ForeignKey('subject.subject_id'), nullable=False)  # Bắt buộc phải có môn học
     is_parents = Column(Integer, default=0)  # 0 là feedback cha, 1 là feedback con
     parent_id = Column(String(36), nullable=True)  # Chỉ điền khi là feedback con
-    created_at = Column(DateTime(timezone=True), default=datetime.now() + timedelta(hours=7))
+    created_at = Column(DateTime(timezone=True), default=get_current_time)
