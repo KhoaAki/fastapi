@@ -7,3 +7,5 @@ class ResetPasswordRequest(BaseModel):
     reset_code: str
     new_password: str
     confirm_password: str
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
