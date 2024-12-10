@@ -13,7 +13,7 @@ from typing import Optional, Union
 import uuid
 from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, AVATAR_UPLOAD_PATH, SMTP_SERVER, SMTP_PASS, SMTP_PORT, SMTP_USER, Client_id
 from basemodel.AuthModel import TokenData, Token, ChangeRespone
-from basemodel.ResetPassModel import ResetPasswordRequest
+from basemodel.ResetPassModel import ResetPasswordRequest, ForgotPasswordRequest
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import string
@@ -240,9 +240,6 @@ async def upload_avatar(
     
     return {"message": "Tải lên ảnh thành công", "image_url": image_url, "image_id": image_id}
 
-
-class ForgotPasswordRequest(BaseModel):
-    email: EmailStr
 #Gửi mã xác nhận đặt lại mật khẩu
 @router.post("/api/forgot_password")
 def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)):
@@ -256,7 +253,7 @@ def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db
     # Xác định người dùng và lưu mã xác nhận
     user = student if student else teacher
     reset_code = ''.join(random.choices(string.ascii_letters + string.digits, k=5))
-    expiry_time = datetime.utcnow() + timedelta(minutes=10)
+    expiry_time = datetime.utcnow() + timedelta(minutes=5)
 
     user.reset_code = reset_code
     user.resetPasswordExpiry = expiry_time
