@@ -122,6 +122,8 @@ def create_teacher(
         image=imageprofile  
     )
     db.add(new_teacher)
+    db.commit() 
+    db.refresh(new_teacher)
     # Danh sách lớp trùng
     conflicting_classes = []
     # Phân công giáo viên vào lớp
