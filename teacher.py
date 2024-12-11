@@ -108,7 +108,27 @@ def create_teacher(
         raise HTTPException(status_code=400, detail="Teacher code already exists.")
     if db.query(Teacher).filter(Teacher.email == teacher_data.email).first():
         raise HTTPException(status_code=400, detail="Email already exists.")
-    # Tạo giáo viên mới
+    # Danh sách lớp trùng
+    conflicting_classes = []
+    # Kiểm tra trước tất cả các lớp được yêu cầu
+    for class_id in teacher_data.class_ids:
+        _class = db.query(Class).filter(Class.class_id == class_id).first()
+        if not _class:
+            raise HTTPException(status_code=404, detail=f"Class with ID {class_id} not found.")
+        # Kiểm tra lớp đã có giáo viên dạy môn học này chưa
+        existing_distribution = db.query(Distribution).join(Teacher).filter(
+            Distribution.class_id == class_id,
+            Teacher.subject_id == teacher_data.subject_id
+        ).first()
+        if existing_distribution:
+            conflicting_classes.append(_class.name_class)
+    # Nếu có lớp bị trùng, trả về lỗi mà không lưu giáo viên
+    if conflicting_classes:
+        raise HTTPException(
+            status_code=400,
+            detail=f"The following classes already have a teacher assigned for this subject: {', '.join(conflicting_classes)}."
+        )
+    # Tạo giáo viên mới (sau khi chắc chắn không có lớp trùng)
     new_teacher = Teacher(
         teacher_id=str(uuid.uuid4()), 
         mateacher=teacher_data.mateacher,
@@ -122,40 +142,19 @@ def create_teacher(
         image=imageprofile  
     )
     db.add(new_teacher)
-    db.commit() 
-    db.refresh(new_teacher)
-    # Danh sách lớp trùng
-    conflicting_classes = []
-    # Phân công giáo viên vào lớp
+    db.commit()  # Lưu giáo viên vào cơ sở dữ liệu
+    db.refresh(new_teacher)  # Làm mới đối tượng để đảm bảo dữ liệu mới nhất
+    # Thực hiện phân công giáo viên vào lớp
     assigned_classes = []
     for class_id in teacher_data.class_ids:
-        _class = db.query(Class).filter(Class.class_id == class_id).first()
-        if not _class:
-            raise HTTPException(status_code=404, detail=f"Class with ID {class_id} not found.")
-        # Kiểm tra lớp đã có giáo viên dạy môn học này chưa
-        existing_distribution = db.query(Distribution).join(Teacher).filter(
-            Distribution.class_id == class_id,
-            Teacher.subject_id == teacher_data.subject_id
-        ).first()
-        if existing_distribution:
-            conflicting_classes.append(_class.name_class)
-        else:
-            # Tạo phân công nếu không có trùng lặp
-            new_distribution = Distribution(
-                class_id=class_id,
-                teacher_id=new_teacher.teacher_id
-            )
-            db.add(new_distribution)
-            assigned_classes.append(_class.name_class)
-    if conflicting_classes:
-        db.rollback()
-        raise HTTPException(
-            status_code=400,
-            detail=f"The following classes already have a teacher assigned for this subject: {', '.join(conflicting_classes)}."
+        new_distribution = Distribution(
+            class_id=class_id,
+            teacher_id=new_teacher.teacher_id
         )
+        db.add(new_distribution)
+        assigned_classes.append(db.query(Class).filter(Class.class_id == class_id).first().name_class)
     try:
-        db.commit()
-        db.refresh(new_teacher)
+        db.commit()  # Lưu tất cả phân công vào cơ sở dữ liệu
     except IntegrityError as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=f"IntegrityError: {str(e)}")
@@ -164,7 +163,6 @@ def create_teacher(
         "teacher_id": new_teacher.teacher_id,
         "assigned_classes": assigned_classes
     }
-
 
 @router.put("/api/put/teachers/{teacher_id}", tags=["Teachers"])
 def update_teacher(
