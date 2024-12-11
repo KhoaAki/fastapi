@@ -154,9 +154,9 @@ def create_teacher(
     try:
         db.commit()
         db.refresh(new_teacher)
-    except IntegrityError:
+    except IntegrityError as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Error occurred while saving data.")
+        raise HTTPException(status_code=400, detail=f"IntegrityError: {str(e)}")
     return {
         "message": "Teacher created and assigned to classes successfully.",
         "teacher_id": new_teacher.teacher_id,
