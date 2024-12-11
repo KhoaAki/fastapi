@@ -96,7 +96,6 @@ def create_quiz_with_questions(
                     f"'{new_quiz.title}' trong môn {subject_name}. "
                     f"Hạn nộp là {new_quiz.due_date.strftime('%d/%m/%Y %H:%M')}."
                 ),
-                time=datetime.now(),
                 student_id=student.student_id
             )
             db.add(notification)
